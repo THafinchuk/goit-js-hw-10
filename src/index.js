@@ -2,40 +2,52 @@ import { fetchBreeds, fetchCatByBreed } from './cat-api';
 import { Report } from 'notiflix/build/notiflix-report-aio';
 import { Loading } from 'notiflix/build/notiflix-loading-aio';
 
-const breedSelect = document.querySelector('.breed-select');
-const catInfo = document.querySelector('.cat-info');
+const select = document.querySelector(`.breed-select`);
+const loader = document.querySelector(`.loader`);
+const error = document.querySelector(`.error`);
+const div = document.querySelector(`.cat-info`);
 
-fetchBreeds()
-  .then(data => {
-    console.log(data);
 
-    const option = data.map(
-      ({ id, name }) => `<option value="${id}">${name}</option>`
-    );
-    breedSelect.innerHTML = option;
-    Loading.remove();
-  })
-  .catch(() => {
-    Report.failure('Oops!', 'Something went wrong! Try reloading the page!');
-  });
+select.style.visibility = `hidden`;
+error.style.visibility = `hidden`;
 
-breedSelect.addEventListener('change', e => {
-  e.preventDefault();
-  Loading.standard('Loading data, please wait...');
-  const breedSelectId = breedSelect.value;
-  fetchCatByBreed(breedSelectId)
-    .then(cat => {
-      Loading.remove();
-      const info = `
-		<div class='thumb-pic'><img src="${cat.url}" alt="${cat.id}" width=400></div>
-		<div class='thumb'>
-		<h2>${cat.breeds[0].name}</h2>
-		<p>${cat.breeds[0].description}</p>
-		<p><b>Temperament:</b> ${cat.breeds[0].temperament}</p>
-		</div>`;
-      catInfo.innerHTML = info;
-    })
-    .catch(() => {
-      Report.failure('Oops!', 'Something went wrong! Try reloading the page!');
-    });
-});
+fetchBreeds().then(data => {
+    loader.style.visibility = `visible`;
+    console.log(`fetchBreeds`)
+    loader.style.visibility = `hidden`;
+    select.style.visibility = `visible`;
+    select.innerHTML = data.map(element => `<option value="${element.id}">${element.name}</option>`).join(``);
+})
+.catch(() => error.style.visibility = `visible`)
+.finally(() => loader.style.visibility = `hidden`)
+
+
+select.addEventListener(`change`, onChangeBreed);
+
+function onChangeBreed(e) {
+    e.preventDefault();
+    let breedId = e.target.value;
+    loader.style.visibility = `visible`;
+    div.style.visibility = `hidden`;
+    fetchCatByBreed(breedId)
+        .then(data => {
+            loader.style.visibility = `hidden`;
+            div.style.visibility = `visible`;
+            div.innerHTML = data.map(element =>
+                `<div><img src="${element.url}" alt="photo cat" width="500" height="400"/></div>`).join(``)
+            data.map(el => el.breeds.forEach(cat => {
+                const array = [cat];
+                const findCat = array.find(option => option.id === breedId);
+                console.log(findCat.description);
+                const makrup = `<div class="cat-card">
+                <h2>${findCat.name}</h2>
+                <p class="p-description">${findCat.description}</p>
+                <h3>Temperament</h3>
+                <p>${findCat.temperament}</p>
+                </div>`
+                div.insertAdjacentHTML(`beforeend`, makrup)
+            }))
+        })
+        .catch(() => error.style.visibility = `visible`)
+        .finally(() => loader.style.visibility = `hidden`)
+};
